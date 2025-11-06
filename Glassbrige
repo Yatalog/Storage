@@ -1,0 +1,6 @@
+for i, v in pairs(game:GetDescendants()) do 
+    if v.ClassName == 'Part' and v:FindFirstChild("breakable") then 
+        v.Color = Color3.fromRGB(112, 128, 144) 
+    end 
+end
+game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 50
