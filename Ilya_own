@@ -1,0 +1,216 @@
+local player = game.Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- ================= НАСТРОЙКИ =================
+local coolEggs = {
+    ["Solaris Egg"] = true,
+    ["Cherub Egg"] = true,
+    ["Blackhole Egg"] = true
+}
+local isFarming = false
+local knownEvents = {}
+local eggPickupRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Game"):WaitForChild("EggPickup")
+-- ============================================
+
+local function scanForEvents()
+    for _, desc in pairs(game:GetDescendants()) do
+        if desc:IsA("RemoteEvent") then
+            if not table.find(knownEvents, desc) then
+                table.insert(knownEvents, desc)
+                print("[SCAN] Найден RemoteEvent:", desc:GetFullName())
+            end
+        end
+    end
+end
+
+game.DescendantAdded:Connect(function(desc)
+    if desc:IsA("RemoteEvent") then
+        if not table.find(knownEvents, desc) then
+            table.insert(knownEvents, desc)
+            print("[NEW] Найден RemoteEvent:", desc:GetFullName())
+        end
+    end
+end)
+
+local function tweenTo(targetPosition, waitTime, freeze)
+    if not isFarming then return end
+    local character = player.Character
+    local humanoid = character and character:FindFirstChild("Humanoid")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root or not humanoid or humanoid.Health <= 0 then return end
+
+    humanoid.WalkSpeed = 0
+    humanoid.JumpPower = 0
+    if freeze then root.Anchored = true end
+
+    local tweenInfo = TweenInfo.new(4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(targetPosition)})
+    tween:Play()
+    tween.Completed:Wait()
+
+    task.wait(waitTime)
+
+    if freeze then root.Anchored = false end
+    humanoid.WalkSpeed = 16
+    humanoid.JumpPower = 50
+end
+
+-- ================= МЕНЮ =================
+if player.PlayerGui:FindFirstChild("FarmGui") then
+    player.PlayerGui.FarmGui:Destroy()
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "FarmGui"
+gui.ResetOnSpawn = false
+gui.Parent = player.PlayerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 180) -- Увеличил высоту для новой надписи
+frame.Position = UDim2.new(0.5, -110, 0.5, -90)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "Auto Farm Eggs"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.SourceSansBold
+title.Parent = frame
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0.8, 0, 0, 40)
+toggleBtn.Position = UDim2.new(0.1, 0, 0.2, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Text = "Включить"
+toggleBtn.TextScaled = true
+toggleBtn.Parent = frame
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 20)
+statusLabel.Position = UDim2.new(0, 0, 0.5, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Выключено"
+statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+statusLabel.TextScaled = true
+statusLabel.Parent = frame
+
+local scanBtn = Instance.new("TextButton")
+scanBtn.Size = UDim2.new(0.8, 0, 0, 20)
+scanBtn.Position = UDim2.new(0.1, 0, 0.62, 0)
+scanBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+scanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+scanBtn.Text = "Сканировать эвенты"
+scanBtn.TextScaled = true
+scanBtn.Parent = frame
+
+-- ===== НОВАЯ НАДПИСЬ =====
+local jokeLabel = Instance.new("TextLabel")
+jokeLabel.Size = UDim2.new(1, 0, 0, 25)
+jokeLabel.Position = UDim2.new(0, 0, 0.8, 0)
+jokeLabel.BackgroundTransparency = 1
+jokeLabel.Text = "Скрипт сделан by Илья"
+jokeLabel.TextColor3 = Color3.fromRGB(255, 215, 0) -- Золотой цвет
+jokeLabel.TextScaled = true
+jokeLabel.Font = Enum.Font.SourceSansBold
+jokeLabel.Parent = frame
+-- ========================
+
+scanBtn.MouseButton1Click:Connect(function()
+    scanForEvents()
+    print("Всего найдено эвентов:", #knownEvents)
+end)
+
+toggleBtn.MouseButton1Click:Connect(function()
+    isFarming = not isFarming
+    if isFarming then
+        toggleBtn.Text = "Выключить"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        statusLabel.Text = "Включено"
+        statusLabel.TextColor3 = Color3.fromRGB(80, 255, 80)
+    else
+        toggleBtn.Text = "Включить"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+        statusLabel.Text = "Выключено"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        local character = player.Character
+        local humanoid = character and character:FindFirstChild("Humanoid")
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then root.Anchored = false end
+        if humanoid then humanoid.WalkSpeed = 16; humanoid.JumpPower = 50 end
+    end
+end)
+
+-- ================= ОСНОВНОЙ ЦИКЛ =================
+task.spawn(function()
+    while task.wait(0.2) do
+        if not isFarming then continue end
+
+        local character = player.Character
+        local humanoid = character and character:FindFirstChild("Humanoid")
+        if not humanoid or humanoid.Health <= 0 then continue end
+
+        local renderedEggs = workspace:FindFirstChild("RenderedEggs")
+        if not renderedEggs then continue end
+
+        local targetEgg = nil
+        local targetEggName = nil
+
+        for _, egg in pairs(renderedEggs:GetChildren()) do
+            if coolEggs[egg.Name] then
+                local handle = egg:FindFirstChild("Handle")
+                if handle then
+                    targetEgg = handle
+                    targetEggName = egg.Name
+                    break
+                end
+            end
+        end
+
+        if targetEgg then
+            print("Лечу к яйцу:", targetEggName)
+            local eggPos = targetEgg.Position - Vector3.new(0, 1, 0)
+            tweenTo(eggPos, 2, true)
+
+            if not isFarming then break end
+
+            local eggModel = targetEgg.Parent
+            if eggModel then
+                print("Пробую подобрать яйцо:", eggModel.Name)
+                for _, event in pairs(knownEvents) do
+                    pcall(function()
+                        event:FireServer(eggModel)
+                        event:FireServer(targetEgg)
+                        event:FireServer()
+                    end)
+                end
+                pcall(function()
+                    eggPickupRemote:FireServer("PickedUp", eggModel.Name, "UUID")
+                end)
+                task.wait(1)
+            end
+
+            if not isFarming then break end
+
+            local plots = workspace:FindFirstChild("Plots")
+            if plots then
+                for _, plot in pairs(plots:GetChildren()) do
+                    if not isFarming then break end
+                    local baseplate = plot:FindFirstChild("Baseplate")
+                    if baseplate then
+                        print("Лечу к базе:", plot.Name)
+                        tweenTo(baseplate.Position, 0.5, false)
+                    end
+                end
+            end
+        end
+    end
+end)
